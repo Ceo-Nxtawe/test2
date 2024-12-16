@@ -15,36 +15,30 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Liste des clients WebSocket connectés
+// Stockage des clients WebSocket connectés
 const clients = new Set();
 
 // Gestion des connexions WebSocket
 wss.on('connection', (ws) => {
-  console.log('Client WebSocket connecté.');
+  console.log('WebSocket client connected.');
   clients.add(ws);
 
   ws.on('close', () => {
-    console.log('Client WebSocket déconnecté.');
+    console.log('WebSocket client disconnected.');
     clients.delete(ws);
   });
 
   ws.on('error', (error) => {
-    console.error('Erreur WebSocket :', error);
+    console.error('WebSocket error:', error);
   });
 });
 
-// Endpoint de vérification de santé
-app.get('/health', (req, res) => {
-  console.log('Requête de santé reçue.');
-  res.json({ status: 'healthy' });
-});
-
-// Endpoint pour recevoir les Webhooks QuickNode
+// Endpoint pour les Webhooks QuickNode
 app.post('/webhook', (req, res) => {
-  try {
-    console.log('Requête Webhook reçue. Corps :', req.body);
+  console.log('Webhook received:', req.body);
 
-    // Diffuser les événements reçus aux clients WebSocket connectés
+  try {
+    // Diffuser les données à tous les clients WebSocket
     const event = req.body;
     clients.forEach((client) => {
       if (client.readyState === client.OPEN) {
@@ -52,16 +46,30 @@ app.post('/webhook', (req, res) => {
       }
     });
 
-    console.log('Événement diffusé aux WebSocket.');
-    res.status(200).send('Webhook traité avec succès.');
+    console.log('Event broadcasted to WebSocket clients.');
+    res.status(200).send('Webhook processed successfully.');
   } catch (error) {
-    console.error('Erreur dans le traitement du Webhook :', error);
-    res.status(500).send('Erreur serveur.');
+    console.error('Error processing webhook:', error);
+    res.status(500).send('Server error.');
   }
 });
 
-// Démarrage du serveur
+// Endpoint de vérification de santé
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Gestion des erreurs serveur
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+server.on('close', () => {
+  console.log('Server has been stopped.');
+});
+
+// Lancer le serveur
 server.listen(PORT, () => {
-  console.log(`Serveur en écoute sur le port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
