@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import WebSocket from 'ws'; // Utiliser l'importation par défaut
+import { WebSocketServer } from 'ws'; // Import correct pour le serveur WebSocket
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 
@@ -8,7 +8,7 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocket.Server({ server }); // WebSocket.Server pour créer le serveur WebSocket
+const wss = new WebSocketServer({ server }); // Création du serveur WebSocket
 
 app.use(cors());
 app.use(express.json());
@@ -36,7 +36,7 @@ app.post('/webhook', (req, res) => {
 
   // Diffuser les données reçues à tous les clients WebSocket connectés
   clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === ws.OPEN) {
       client.send(JSON.stringify(event));
     }
   });
