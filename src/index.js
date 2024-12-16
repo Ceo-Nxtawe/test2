@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import WebSocket from 'ws';
+import WebSocket from 'ws'; // Utiliser l'importation par défaut
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 
@@ -8,7 +8,7 @@ dotenv.config();
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server }); // WebSocket.Server pour créer le serveur WebSocket
 
 app.use(cors());
 app.use(express.json());
@@ -47,6 +47,11 @@ app.post('/webhook', (req, res) => {
 // Endpoint de vérification de santé
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
+});
+
+// Lancer le serveur
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Lancer le serveur
