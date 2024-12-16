@@ -7,17 +7,17 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.91.1",       // Pour interagir avec la blockchain Solana
-    "@solana/spl-token": "^0.4.1",      // Pour gérer les interactions avec les tokens SPL
-    "cors": "^2.8.5",                   // Pour permettre les requêtes cross-origin
-    "dotenv": "^16.4.5",                // Pour gérer les variables d'environnement
-    "express": "^4.18.3",               // Pour créer des routes HTTP
-    "ws": "^8.13.0"                     // Pour la gestion des connexions WebSocket
+    "@solana/web3.js": "^1.91.1",       // Bibliothèque pour interagir avec Solana
+    "@solana/spl-token": "^0.4.1",      // Gestion des tokens SPL
+    "cors": "^2.8.5",                   // Gestion des politiques CORS
+    "dotenv": "^16.4.5",                // Chargement des variables d'environnement
+    "express": "^4.18.3",               // Framework HTTP
+    "ws": "^8.13.0"                     // Gestion des connexions WebSocket
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"                 // Pour recharger automatiquement le serveur en développement
+    "nodemon": "^3.1.0"                 // Rechargement automatique en développement
   },
   "engines": {
-    "node": ">=18"                      // Assure l'utilisation de Node.js v18 ou supérieur
+    "node": ">=18"                      // Assure que Node.js 18+ est utilisé
   }
 }
