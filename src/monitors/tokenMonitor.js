@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
+const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://shy-boldest-model.solana-mainnet.quiknode.pro/a39977485f024e18a2d2a167161ab8a8e0e99ab5';
 const TOKEN_MINT = process.env.TOKEN_MINT_ADDRESS || 'v8kp27iQox1vsuo7wCuPiYGh3ZFQDAy8hB4qwn5Abpump';
 
 export class TokenMonitor {
