@@ -1,9 +1,11 @@
-require('dotenv').config();
-const express = require('express');
-const axios = require('axios');
+rimport dotenv from 'dotenv';
+import express from 'express';
+import axios from 'axios';
 
+dotenv.config(); // Charger les variables d'environnement
 const app = express();
 app.use(express.json());
+
 
 // Configurer votre clé API QuickNode et URL QuickStreams
 const QUICKNODE_API_KEY = process.env.QUICKNODE_API_KEY; // Définissez dans votre fichier .env
