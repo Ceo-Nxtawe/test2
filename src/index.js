@@ -1,79 +1,65 @@
-// Configuration d'un backend Node.js pour accepter un Webhook QuickNode sur Railway
-
-import express from 'express';
-import cors from 'cors';
-import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
-import dotenv from 'dotenv';
-
-dotenv.config();
+require('dotenv').config();
+const express = require('express');
+const axios = require('axios');
 
 const app = express();
-const server = createServer(app);
-const wss = new WebSocketServer({ server });
-
-const PORT = process.env.PORT || 3000;
-const QUICKNODE_API_KEY = process.env.QUICKNODE_API_KEY;
-
-if (!QUICKNODE_API_KEY) {
-  console.error("Erreur : QUICKNODE_API_KEY est manquant dans les variables d'environnement.");
-  process.exit(1);
-}
-
-app.use(cors());
 app.use(express.json());
 
-// Stockage des clients WebSocket connectés
-const clients = new Set();
+// Configurer votre clé API QuickNode et URL QuickStreams
+const QUICKNODE_API_KEY = process.env.QUICKNODE_API_KEY; // Définissez dans votre fichier .env
+const QUICKNODE_URL = `https://your-endpoint-name.quicknode.com/quickstreams/v1/streams`;
 
-// Gestion des connexions WebSocket
-wss.on('connection', (ws) => {
-  console.log('Client WebSocket connecté.');
-  clients.add(ws);
-
-  ws.on('close', () => {
-    console.log('Client WebSocket déconnecté.');
-    clients.delete(ws);
-  });
-
-  ws.on('error', (error) => {
-    console.error('Erreur WebSocket :', error);
-  });
-});
-
-// Endpoint pour les Webhooks QuickNode
-app.post('/webhook', (req, res) => {
-  const authHeader = req.headers['authorization'];
-
-  if (!authHeader || authHeader !== `Bearer ${QUICKNODE_API_KEY}`) {
-    console.error("Token d'authentification manquant ou invalide.");
-    return res.status(401).send('Unauthorized');
-  }
+// 1. Route pour créer un stream
+app.post('/create-stream', async (req, res) => {
+  const { blockchain, network, address, webhookUrl } = req.body;
 
   try {
-    console.log('Webhook reçu avec un token valide. Corps :', req.body);
-
-    // Diffuser les données aux clients WebSocket
-    const event = req.body;
-    clients.forEach((client) => {
-      if (client.readyState === client.OPEN) {
-        client.send(JSON.stringify(event));
+    const response = await axios.post(
+      QUICKNODE_URL,
+      {
+        blockchain,
+        network,
+        filters: { address }, // Ajoutez des filtres comme l'adresse d'un smart contract
+        webhook_url: webhookUrl,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${QUICKNODE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
       }
-    });
+    );
 
-    res.status(200).send('Webhook traité avec succès.');
+    res.status(200).json({
+      message: 'Stream créé avec succès !',
+      stream: response.data,
+    });
   } catch (error) {
-    console.error('Erreur dans le traitement du Webhook :', error);
-    res.status(500).send('Erreur serveur.');
+    console.error('Erreur lors de la création du stream :', error.response.data);
+    res.status(500).json({ error: 'Impossible de créer le stream' });
   }
 });
 
-// Endpoint de vérification de santé
-app.get('/health', (req, res) => {
-  res.status(200).send({ status: 'healthy' });
+// 2. Route pour gérer les webhooks (réception des événements)
+app.post('/webhook', (req, res) => {
+  const event = req.body;
+
+  console.log('Événement reçu :', JSON.stringify(event, null, 2));
+
+  // Exemple : Traiter une transaction
+  if (event.type === 'transaction') {
+    console.log(`Transaction détectée : 
+      De: ${event.from}
+      À: ${event.to}
+      Montant: ${event.value}`);
+  }
+
+  res.sendStatus(200); // Accuser réception de l'événement
 });
 
 // Lancer le serveur
-server.listen(PORT, () => {
-  console.log(`Serveur en écoute sur le port ${PORT}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
 });
+
