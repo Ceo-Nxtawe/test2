@@ -47,8 +47,10 @@ export class TokenMonitor {
           }
 
           try {
+            // Récupérer les données de la transaction avec prise en charge de la version
             const transaction = await this.connection.getParsedTransaction(logs.signature, {
               commitment: 'confirmed',
+              maxSupportedTransactionVersion: 0, // Ajout pour supporter les transactions versionnées
             });
 
             if (!transaction) {
@@ -58,17 +60,26 @@ export class TokenMonitor {
 
             console.log('Parsed transaction details:', transaction);
 
-            // Extraire le prix en SOL depuis la transaction
-            const priceInSOL = this.extractPriceFromTransaction(transaction);
-            if (priceInSOL) {
-              console.log(`Price detected: ${priceInSOL} SOL`);
-            }
-
-            for (const listener of this.listeners) {
-              listener({ transaction, priceInSOL });
+            // Extraire uniquement les transactions "buy" ou "sell"
+            const buyOrSell = this.extractBuyAndSellFromTransaction(transaction);
+            if (buyOrSell) {
+              console.log(
+                `${buyOrSell.type === 'buy' ? '💰 BUY' : '🔻 SELL'}: ${
+                  buyOrSell.tokenTransfer.amount
+                } tokens for ${buyOrSell.solTransfer.amount} SOL`
+              );
+              for (const listener of this.listeners) {
+                listener({ transaction, buyOrSell });
+              }
+            } else {
+              console.log('Transaction does not match buy/sell criteria, ignored.');
             }
           } catch (error) {
-            console.error('Error processing transaction:', error);
+            if (error.message.includes('Transaction version')) {
+              console.warn(`Skipping unsupported transaction version: ${logs.signature}`);
+            } else {
+              console.error('Error processing transaction:', error);
+            }
           }
         }
       );
@@ -84,37 +95,50 @@ export class TokenMonitor {
     }
   }
 
-  extractPriceFromTransaction(transaction) {
+  extractBuyAndSellFromTransaction(transaction) {
     try {
       const instructions = transaction.transaction.message.instructions;
       let solTransfer = null;
       let tokenTransfer = null;
 
-      // Parcourir les instructions pour trouver les transferts
       for (const instruction of instructions) {
+        // Détection des transferts SOL
         if (instruction.programId.toBase58() === '11111111111111111111111111111111') {
-          // Transfert de SOL
           const parsed = instruction.parsed;
           if (parsed && parsed.info && parsed.info.lamports) {
-            solTransfer = parsed.info.lamports / 1e9; // Convertir lamports en SOL
+            solTransfer = {
+              amount: parsed.info.lamports / 1e9, // Convertir en SOL
+              source: parsed.info.source,
+              destination: parsed.info.destination,
+            };
           }
-        } else if (instruction.programId.toBase58() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
-          // Transfert de token SPL
+        }
+
+        // Détection des transferts SPL Tokens
+        if (instruction.programId.toBase58() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
           const parsed = instruction.parsed;
           if (parsed && parsed.info && parsed.info.tokenAmount) {
-            tokenTransfer = parsed.info.tokenAmount.uiAmount;
+            tokenTransfer = {
+              amount: parsed.info.tokenAmount.uiAmount,
+              source: parsed.info.source,
+              destination: parsed.info.destination,
+            };
           }
         }
       }
 
-      // Si on trouve un transfert SOL et un transfert de token, calculer le prix
+      // Identifier un "buy" ou un "sell"
       if (solTransfer && tokenTransfer) {
-        return solTransfer / tokenTransfer;
+        if (solTransfer.destination && tokenTransfer.source) {
+          return { type: 'buy', solTransfer, tokenTransfer };
+        } else if (solTransfer.source && tokenTransfer.destination) {
+          return { type: 'sell', solTransfer, tokenTransfer };
+        }
       }
 
       return null;
     } catch (error) {
-      console.error('Error extracting price:', error);
+      console.error('Error extracting buy/sell data:', error);
       return null;
     }
   }
