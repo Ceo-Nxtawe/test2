@@ -39,26 +39,22 @@ export class TokenMonitor {
       this.subscriptionId = this.connection.onLogs(
         this.mintAddress,
         async (logs) => {
-          console.log('Logs received:', logs);
-
           if (!logs || !logs.signature) {
-            console.error('Invalid logs: Missing signature', logs);
+            console.warn('Invalid logs: Missing signature.');
             return;
           }
 
           try {
-            // Récupérer les données de la transaction avec prise en charge de la version
+            // Récupérer la transaction
             const transaction = await this.connection.getParsedTransaction(logs.signature, {
               commitment: 'confirmed',
-              maxSupportedTransactionVersion: 0, // Ajout pour supporter les transactions versionnées
+              maxSupportedTransactionVersion: 0, // Support des transactions versionnées
             });
 
             if (!transaction) {
-              console.warn(`Transaction not found for signature: ${logs.signature}`);
+              console.debug(`Transaction not found: ${logs.signature}`);
               return;
             }
-
-            console.log('Parsed transaction details:', transaction);
 
             // Extraire uniquement les transactions "buy" ou "sell"
             const buyOrSell = this.extractBuyAndSellFromTransaction(transaction);
@@ -72,19 +68,19 @@ export class TokenMonitor {
                 listener({ transaction, buyOrSell });
               }
             } else {
-              console.log('Transaction does not match buy/sell criteria, ignored.');
+              console.debug('Transaction does not match buy/sell criteria, ignored.');
             }
           } catch (error) {
             if (error.message.includes('Transaction version')) {
               console.warn(`Skipping unsupported transaction version: ${logs.signature}`);
             } else {
-              console.error('Error processing transaction:', error);
+              console.error('Error processing transaction:', error.message);
             }
           }
         }
       );
     } catch (error) {
-      console.error('Error starting monitoring:', error);
+      console.error('Error starting monitoring:', error.message);
     }
   }
 
@@ -138,9 +134,10 @@ export class TokenMonitor {
 
       return null;
     } catch (error) {
-      console.error('Error extracting buy/sell data:', error);
+      console.error('Error extracting buy/sell data:', error.message);
       return null;
     }
   }
 }
+
 
