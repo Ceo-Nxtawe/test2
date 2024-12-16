@@ -1,5 +1,3 @@
-// Configuration d'un backend Node.js pour accepter un Webhook QuickNode sur Railway
-
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -17,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Liste des clients WebSocket connectés
 const clients = new Set();
 
 // Gestion des connexions WebSocket
@@ -34,21 +33,26 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Endpoint pour recevoir les Webhooks de QuickNode
+// Endpoint de vérification de santé
+app.get('/health', (req, res) => {
+  console.log('Requête de santé reçue.');
+  res.json({ status: 'healthy' });
+});
+
+// Endpoint pour recevoir les Webhooks QuickNode
 app.post('/webhook', (req, res) => {
   try {
-    console.log('Requête Webhook reçue. Corps de la requête :', req.body);
+    console.log('Requête Webhook reçue. Corps :', req.body);
 
+    // Diffuser les événements reçus aux clients WebSocket connectés
     const event = req.body;
-
-    // Diffuser les événements reçus à tous les clients WebSocket
     clients.forEach((client) => {
       if (client.readyState === client.OPEN) {
         client.send(JSON.stringify(event));
       }
     });
 
-    console.log('Événement diffusé aux clients WebSocket.');
+    console.log('Événement diffusé aux WebSocket.');
     res.status(200).send('Webhook traité avec succès.');
   } catch (error) {
     console.error('Erreur dans le traitement du Webhook :', error);
@@ -56,13 +60,7 @@ app.post('/webhook', (req, res) => {
   }
 });
 
-// Endpoint de vérification de santé
-app.get('/health', (req, res) => {
-  console.log('Requête de santé reçue.');
-  res.json({ status: 'healthy' });
-});
-
-// Lancer le serveur HTTP avec WebSocket
+// Démarrage du serveur
 server.listen(PORT, () => {
   console.log(`Serveur en écoute sur le port ${PORT}`);
 });
