@@ -3,9 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuration des URLs RPC et WebSocket
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-const SOLANA_WS = process.env.SOLANA_WS_URL || 'wss://shy-boldest-model.solana-mainnet.quiknode.pro/a39977485f024e18a2d2a167161ab8a8e0e99ab5';
+const SOLANA_WS = process.env.SOLANA_WS_URL || 'wss://shy-boldest-model.solana-mainnet.quiknode.pro/a39977485f024e18a2d2a167161ab8a8e0e99ab5'
 const TOKEN_MINT = process.env.TOKEN_MINT_ADDRESS || 'BvSUmSmTR4T9F7pd2LdDKMvz9XiE2Z9tbkJaggVypump';
 
 export class TokenMonitor {
@@ -35,43 +34,32 @@ export class TokenMonitor {
 
   async startMonitoring() {
     try {
-      console.log(`Monitoring started for token: ${this.mintAddress.toBase58()}`);
-      console.log(`Using WebSocket endpoint: ${SOLANA_WS}`);
-
+      console.log(`Monitoring started with WebSocket endpoint: ${SOLANA_WS}`);
+      console.log(`Token Mint Address: ${this.mintAddress.toBase58()}`);
       this.subscriptionId = this.connection.onLogs(
         this.mintAddress,
-        async (logs) => {
+        async (logs, context) => {
           console.log('Logs received:', logs);
 
+          // Vérifiez si logs.signature est valide
           if (!logs || !logs.signature) {
-            console.warn('Invalid logs: Missing signature', logs);
+            console.error('Invalid logs: Missing signature', logs);
             return;
           }
 
           try {
-            // Récupérer la transaction avec support des versions
-            const transaction = await this.connection.getTransaction(logs.signature, {
-              commitment: 'confirmed',
-              maxSupportedTransactionVersion: 0,
-            });
-
+            const transaction = await this.connection.getTransaction(logs.signature, { commitment: 'confirmed' });
             if (!transaction) {
               console.warn(`Transaction not found for signature: ${logs.signature}`);
               return;
             }
 
             console.log('Transaction details:', transaction);
-
-            // Diffuser l'événement aux abonnés
             for (const listener of this.listeners) {
               listener(transaction);
             }
           } catch (error) {
-            if (error.message.includes('Transaction version')) {
-              console.warn(`Skipping unsupported transaction version: ${logs.signature}`);
-            } else {
-              console.error('Error processing transaction:', error);
-            }
+            console.error('Error processing transaction:', error);
           }
         }
       );
@@ -87,4 +75,3 @@ export class TokenMonitor {
     }
   }
 }
-
