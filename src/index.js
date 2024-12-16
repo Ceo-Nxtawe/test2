@@ -16,10 +16,9 @@ const PORT = process.env.PORT || 3000;
 const QUICKNODE_API_KEY = process.env.QUICKNODE_API_KEY;
 
 if (!QUICKNODE_API_KEY) {
-  console.error('Erreur : QUICKNODE_API_KEY est manquant dans les variables d\'environnement.');
+  console.error("Erreur : QUICKNODE_API_KEY est manquant dans les variables d'environnement.");
   process.exit(1);
 }
-
 
 app.use(cors());
 app.use(express.json());
@@ -47,7 +46,7 @@ app.post('/webhook', (req, res) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || authHeader !== `Bearer ${QUICKNODE_API_KEY}`) {
-    console.error('Token d'authentification manquant ou invalide.');
+    console.error("Token d'authentification manquant ou invalide.");
     return res.status(401).send('Unauthorized');
   }
 
