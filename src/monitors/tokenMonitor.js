@@ -3,19 +3,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuration de l'adresse RPC et du WebSocket
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 const SOLANA_WS = process.env.SOLANA_WS_URL || 'wss://shy-boldest-model.solana-mainnet.quiknode.pro/a39977485f024e18a2d2a167161ab8a8e0e99ab5';
 const TOKEN_MINT = process.env.TOKEN_MINT_ADDRESS || 'BvSUmSmTR4T9F7pd2LdDKMvz9XiE2Z9tbkJaggVypump';
 
 export class TokenMonitor {
   constructor() {
+    // Initialisation de la connexion Solana
     this.connection = new Connection(SOLANA_RPC, {
       commitment: 'confirmed',
-      wsEndpoint: SOLANA_WS, // WebSocket pour les logs en temps réel
+      wsEndpoint: SOLANA_WS,
     });
-    this.mintAddress = new PublicKey(TOKEN_MINT); // Adresse de mint
-    this.listeners = new Set(); // Gestion des abonnements
+    this.mintAddress = new PublicKey(TOKEN_MINT);
+    this.listeners = new Set(); // Gestion des abonnés
   }
 
   subscribe(callback) {
@@ -37,6 +37,7 @@ export class TokenMonitor {
     try {
       console.log(`Starting monitoring for token: ${this.mintAddress.toBase58()}`);
       console.log(`Using WebSocket endpoint: ${SOLANA_WS}`);
+
       this.subscriptionId = this.connection.onLogs(
         this.mintAddress,
         async (logs, context) => {
@@ -48,6 +49,7 @@ export class TokenMonitor {
           }
 
           try {
+            // Récupération de la transaction avec la prise en charge des versions
             const transaction = await this.connection.getTransaction(logs.signature, {
               commitment: 'confirmed',
               maxSupportedTransactionVersion: 0, // Support des transactions versionnées
@@ -65,7 +67,11 @@ export class TokenMonitor {
               listener(this.processTransaction(transaction));
             }
           } catch (error) {
-            console.error('Error processing transaction:', error);
+            if (error.message.includes('Transaction version')) {
+              console.warn(`Skipping unsupported transaction version: ${logs.signature}`);
+            } else {
+              console.error('Error processing transaction:', error);
+            }
           }
         }
       );
@@ -82,7 +88,6 @@ export class TokenMonitor {
   }
 
   processTransaction(transaction) {
-    // Analyse basique des instructions de la transaction
     try {
       const message = transaction.transaction.message;
       const instructions = message.instructions;
@@ -108,14 +113,12 @@ export class TokenMonitor {
     try {
       const { programId, data } = instruction;
 
-      // Exemple d'analyse : détection des transferts SPL Token
       if (programId.toBase58() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
         const details = {
           programId: programId.toBase58(),
           data: data ? data.toString('hex') : null, // Convertir les données brutes en hexadécimal
         };
 
-        // Simplification : détection de "buy" ou "sell"
         if (data.includes('Transfer')) {
           return { type: 'transfer', details };
         } else if (data.includes('InitializeAccount3')) {
